@@ -14,6 +14,7 @@ import {
   combineSourcemaps,
   extractHostnamesFromCerts,
   extractHostnamesFromSubjectAltName,
+  ensureWatchedFile,
   flattenId,
   generateCodeFrame,
   getFileStartIndex,
@@ -134,6 +135,37 @@ describe('isParentDirectory', () => {
       })
     }
   }
+})
+
+describe('ensureWatchedFile', () => {
+  test('does not watch a file under root with Windows separators', () => {
+    const existsSync = vi.spyOn(fs, 'existsSync')
+    onTestFinished(() => existsSync.mockRestore())
+    const watcher = { add: vi.fn() }
+
+    ensureWatchedFile(
+      watcher as unknown as Parameters<typeof ensureWatchedFile>[0],
+      'C:\\project\\src\\file.ts',
+      'C:/project',
+    )
+
+    expect(watcher.add).not.toHaveBeenCalled()
+    expect(existsSync).not.toHaveBeenCalled()
+  })
+
+  test('still watches a file in a sibling directory', () => {
+    const existsSync = vi.spyOn(fs, 'existsSync').mockReturnValue(true)
+    onTestFinished(() => existsSync.mockRestore())
+    const watcher = { add: vi.fn() }
+
+    ensureWatchedFile(
+      watcher as unknown as Parameters<typeof ensureWatchedFile>[0],
+      'C:\\project-next\\src\\file.ts',
+      'C:/project',
+    )
+
+    expect(watcher.add).toHaveBeenCalledOnce()
+  })
 })
 
 describe('injectQuery', () => {
